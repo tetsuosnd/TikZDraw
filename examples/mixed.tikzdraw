@@ -1,0 +1,410 @@
+{
+  "format": "tikz-draw",
+  "version": 1,
+  "name": "FeynHand + CircuiTikZ",
+  "page": {
+    "width": 160,
+    "height": 200,
+    "grid": 5
+  },
+  "elements": [
+    {
+      "id": "mixed-1",
+      "type": "feynman",
+      "points": [
+        {
+          "x": 15,
+          "y": 50
+        },
+        {
+          "x": 26.666666666666664,
+          "y": 50
+        },
+        {
+          "x": 38.33333333333333,
+          "y": 50
+        },
+        {
+          "x": 50,
+          "y": 50
+        }
+      ],
+      "style": {
+        "stroke": "#226b61",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "particle": "photon",
+      "label": "\\gamma",
+      "momentum": "q",
+      "labelSide": "left",
+      "momentumSide": "right",
+      "momentumReverse": false
+    },
+    {
+      "id": "mixed-2",
+      "type": "feynman",
+      "points": [
+        {
+          "x": 110,
+          "y": 50
+        },
+        {
+          "x": 121.66666666666667,
+          "y": 50
+        },
+        {
+          "x": 133.33333333333334,
+          "y": 50
+        },
+        {
+          "x": 145,
+          "y": 50
+        }
+      ],
+      "style": {
+        "stroke": "#226b61",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "particle": "photon",
+      "label": "\\gamma",
+      "momentum": "",
+      "labelSide": "left",
+      "momentumSide": "right",
+      "momentumReverse": false
+    },
+    {
+      "id": "mixed-3",
+      "type": "feynman",
+      "points": [
+        {
+          "x": 50,
+          "y": 50
+        },
+        {
+          "x": 50,
+          "y": 8
+        },
+        {
+          "x": 110,
+          "y": 8
+        },
+        {
+          "x": 110,
+          "y": 50
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "particle": "fermion",
+      "label": "e^-",
+      "momentum": "k",
+      "labelSide": "right",
+      "momentumSide": "left",
+      "momentumReverse": false
+    },
+    {
+      "id": "mixed-4",
+      "type": "feynman",
+      "points": [
+        {
+          "x": 110,
+          "y": 50
+        },
+        {
+          "x": 110,
+          "y": 92
+        },
+        {
+          "x": 50,
+          "y": 92
+        },
+        {
+          "x": 50,
+          "y": 50
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "particle": "fermion",
+      "label": "e^-",
+      "momentum": "k+q",
+      "labelSide": "right",
+      "momentumSide": "left",
+      "momentumReverse": false
+    },
+    {
+      "id": "mixed-5",
+      "type": "vertex",
+      "points": [
+        {
+          "x": 50,
+          "y": 50
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "vertexStyle": "dot",
+      "size": 2,
+      "label": ""
+    },
+    {
+      "id": "mixed-6",
+      "type": "vertex",
+      "points": [
+        {
+          "x": 110,
+          "y": 50
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "vertexStyle": "dot",
+      "size": 2,
+      "label": ""
+    },
+    {
+      "id": "mixed-7",
+      "type": "text",
+      "points": [
+        {
+          "x": 80,
+          "y": 93
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "text": "tikz-feynhand",
+      "math": false,
+      "fontSize": 11,
+      "anchor": "center"
+    },
+    {
+      "id": "mixed-8",
+      "type": "circuit",
+      "points": [
+        {
+          "x": 40,
+          "y": 175
+        },
+        {
+          "x": 40,
+          "y": 125
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "component": "V",
+      "standard": "american",
+      "size": 12,
+      "label": "V_s",
+      "voltage": "",
+      "current": "",
+      "labelSide": "left",
+      "invert": false,
+      "terminals": "none"
+    },
+    {
+      "id": "mixed-9",
+      "type": "circuit",
+      "points": [
+        {
+          "x": 40,
+          "y": 125
+        },
+        {
+          "x": 115,
+          "y": 125
+        }
+      ],
+      "style": {
+        "stroke": "#226b61",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "component": "R",
+      "standard": "american",
+      "size": 12,
+      "label": "R_1",
+      "voltage": "",
+      "current": "i",
+      "labelSide": "left",
+      "invert": false,
+      "terminals": "none"
+    },
+    {
+      "id": "mixed-10",
+      "type": "circuit",
+      "points": [
+        {
+          "x": 115,
+          "y": 125
+        },
+        {
+          "x": 115,
+          "y": 175
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "component": "C",
+      "standard": "american",
+      "size": 12,
+      "label": "C_1",
+      "voltage": "v_C",
+      "current": "",
+      "labelSide": "right",
+      "invert": false,
+      "terminals": "none"
+    },
+    {
+      "id": "mixed-11",
+      "type": "circuit",
+      "points": [
+        {
+          "x": 115,
+          "y": 175
+        },
+        {
+          "x": 40,
+          "y": 175
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "component": "short",
+      "standard": "american",
+      "size": 12,
+      "label": "",
+      "voltage": "",
+      "current": "",
+      "labelSide": "left",
+      "invert": false,
+      "terminals": "none"
+    },
+    {
+      "id": "mixed-12",
+      "type": "ground",
+      "points": [
+        {
+          "x": 40,
+          "y": 175
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "rotation": 0
+    },
+    {
+      "id": "mixed-13",
+      "type": "junction",
+      "points": [
+        {
+          "x": 40,
+          "y": 175
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "size": 1.6,
+      "open": false
+    },
+    {
+      "id": "mixed-14",
+      "type": "junction",
+      "points": [
+        {
+          "x": 115,
+          "y": 125
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "size": 1.6,
+      "open": false
+    },
+    {
+      "id": "mixed-15",
+      "type": "text",
+      "points": [
+        {
+          "x": 80,
+          "y": 195
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "text": "circuitikz",
+      "math": false,
+      "fontSize": 11,
+      "anchor": "center"
+    }
+  ]
+}

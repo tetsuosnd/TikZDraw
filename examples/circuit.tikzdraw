@@ -1,0 +1,209 @@
+{
+  "format": "tikz-draw",
+  "version": 1,
+  "name": "CircuiTikZ — RC circuit",
+  "page": {
+    "width": 160,
+    "height": 100,
+    "grid": 5
+  },
+  "elements": [
+    {
+      "id": "circuit-1",
+      "type": "circuit",
+      "points": [
+        {
+          "x": 40,
+          "y": 75
+        },
+        {
+          "x": 40,
+          "y": 25
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "component": "V",
+      "standard": "american",
+      "size": 12,
+      "label": "V_s",
+      "voltage": "",
+      "current": "",
+      "labelSide": "left",
+      "invert": false,
+      "terminals": "none"
+    },
+    {
+      "id": "circuit-2",
+      "type": "circuit",
+      "points": [
+        {
+          "x": 40,
+          "y": 25
+        },
+        {
+          "x": 115,
+          "y": 25
+        }
+      ],
+      "style": {
+        "stroke": "#226b61",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "component": "R",
+      "standard": "american",
+      "size": 12,
+      "label": "R_1",
+      "voltage": "",
+      "current": "i",
+      "labelSide": "left",
+      "invert": false,
+      "terminals": "none"
+    },
+    {
+      "id": "circuit-3",
+      "type": "circuit",
+      "points": [
+        {
+          "x": 115,
+          "y": 25
+        },
+        {
+          "x": 115,
+          "y": 75
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "component": "C",
+      "standard": "american",
+      "size": 12,
+      "label": "C_1",
+      "voltage": "v_C",
+      "current": "",
+      "labelSide": "right",
+      "invert": false,
+      "terminals": "none"
+    },
+    {
+      "id": "circuit-4",
+      "type": "circuit",
+      "points": [
+        {
+          "x": 115,
+          "y": 75
+        },
+        {
+          "x": 40,
+          "y": 75
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "component": "short",
+      "standard": "american",
+      "size": 12,
+      "label": "",
+      "voltage": "",
+      "current": "",
+      "labelSide": "left",
+      "invert": false,
+      "terminals": "none"
+    },
+    {
+      "id": "circuit-5",
+      "type": "ground",
+      "points": [
+        {
+          "x": 40,
+          "y": 75
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "rotation": 0
+    },
+    {
+      "id": "circuit-6",
+      "type": "junction",
+      "points": [
+        {
+          "x": 40,
+          "y": 75
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "size": 1.6,
+      "open": false
+    },
+    {
+      "id": "circuit-7",
+      "type": "junction",
+      "points": [
+        {
+          "x": 115,
+          "y": 25
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "size": 1.6,
+      "open": false
+    },
+    {
+      "id": "circuit-8",
+      "type": "text",
+      "points": [
+        {
+          "x": 80,
+          "y": 95
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "text": "circuitikz",
+      "math": false,
+      "fontSize": 11,
+      "anchor": "center"
+    }
+  ]
+}

@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld(
     export: (source, kind) => ipcRenderer.invoke('document:export', { source, kind }),
     confirmDiscard: () => ipcRenderer.invoke('document:discard'),
     changed: (dirty) => ipcRenderer.send('document:changed', !!dirty),
+    palettesChanged: (value) => ipcRenderer.send('palettes:changed', value),
     newPath: () => ipcRenderer.send('document:new-path'),
     close: () => ipcRenderer.send('document:close'),
     onCommand: (callback) => ipcRenderer.on('command', (_event, command) => callback(command)),

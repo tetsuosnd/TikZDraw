@@ -1,30 +1,40 @@
 # 現在状態（2026-11-21）
 
-初版 v0.1.0 を実装した。macOS、Electron 45.4.1、日本語 UI。
-`dist/TikZ Draw.app` を生成し、同梱した画面・KaTeX・IPC が動くことを実アプリで確認した。
-直線・矢印・折れ線・長方形・円・楕円・円弧・ベジェ曲線・文字・数式ラベルに対応する。
-制御点編集、数値による移動・サイズ指定、複数選択、線と塗り、前後順、複製、Undo/Redo、
-保存・再読込、TikZ/単体 TeX 出力、未保存ドラフト復元を実装した。
+v0.2.0 を実装した。macOS、Electron 45.4.1、日本語 UI。
+通常作図に加えて tikz-feynhand / circuitikz の図形とソース読込・編集を扱う。
+更新した .app は `dist/TikZ Draw.app`。private remote は `tetsuosnd/TikZDraw`。
+
+## ユーザーが承認した仕様
+
+- フェルミオン・反フェルミオン・スカラー・光子・グルーオン・ゴースト、
+  頂点、曲線・ループ、粒子名・運動量を描画・編集・保存・TeX 出力する。
+- 抵抗・コンデンサ・コイル・電源・電池・ダイオード・LED・スイッチ・配線・接地・接続点、
+  部品名・電流・電圧・端子、米式／欧式を扱う。
+- 通常作図がデフォルト。両専門パレットは初期状態で非表示。
+  「追加パレット…」と「表示」メニューで個別に切替し、マシンに設定を保存する。
+- パレットの表示状態に関係なく、図面の専門図形を表示・編集・保存する。
+- アプリの出力と同じ構文の TikZ/TeX を読み込み、ソース編集から図へ反映する。
+  未対応構文では図と編集中ソースを保持する。反映は 1 回の Undo で戻せる。
+- TeX の読込後の保存は .tikzdraw の保存先を尋ね、TeX ファイルへ JSON を上書きしない。
+- 旧版の通常図形ファイルを読み込める。専門図形を含む図は v0.2 以降で使う。
 
 ## 検証
 
-| 検査 | 結果 | 最後の実測 |
+| 検査 | 結果 | 実測 |
 |---|---|---|
-| `npm test` | 9 件 PASS | 0.561 s |
-| `npm run test:desktop` | 12 件 PASS | 6.584 s |
-| `npm run test:tex` | 単体 2 件・日本語 1 件・本文読込 1 件 PASS | 3.922 s |
-| `npm run build:mac` | .app 生成・ad-hoc 署名検証 | 1.807 s |
-| `.app --smoke-test=…` | 同梱ファイルによる起動・sandbox・数式・IPC を確認 | 4.297 s |
-| `npm run format:check` | PASS | — |
+| npm test | 24 件 PASS（旧形式・全種類・ソース往復・未対応構文・小用紙等） | 0.411 s |
+| npm run test:desktop | 20 件 PASS（従来 12 件＋専門図形・表示設定・読込・反映・取消・Close） | 12.137 s |
+| npm run test:tex | 10 件 PASS（通常・日本語・本文読込・専門図形・混在・全種類・ソース編集後・日本語混在） | 各 0.53–2.48 s |
+| npm run build:mac | .app 生成・ad-hoc 署名検証 | 1.721 s |
+| 完成した .app の起動検査 | 同梱ファイル・sandbox・KaTeX・IPC を確認 | 2.738 s |
+| npm run format:check | PASS | — |
 
-TeX の 4 件はエラー・Overfull・Missing character が無いことを検査し、
-Poppler で描画して見た目も確認した。検証用スクリーンショットは `test-output/`、
-代表画面は `assets/screenshot.png`。生成 PDF は `examples/` に保存。
+TeX 出力はエラー・Overfull・Missing character を検査し、Poppler で表示も確認した。
+検証用画像は test-output/、代表画面は assets/、生成 PDF と出力例は examples/。
 
-## 初版の境界
+## 対応範囲
 
-Windows の配布確認、Developer ID 署名・公証、任意の TikZ/WinTpic ファイルの読込は未対応。
-KaTeX の編集時表示と実 TeX は対応コマンド・字形が完全には一致しない。
-ソースの private remote は `tetsuosnd/TikZDraw`。
-2026-11-21 にユーザーがアプリの全ソースと `tetsuosnd-prefs/repos.md` の追加 1 行の
-GitHub への push を明示承認した。承認待ちは解消済み。
+詳細は docs/package-support.md。対応する数値座標・明示した経路を直接解析する。
+任意マクロ・独自スタイル・繰り返し・外部入力・plot・自動配置は逆解析しない。
+SVG と KaTeX は編集用の概略表示で、実 TeX と字形・寸法・ラベル配置が完全には一致しない。
+Windows 配布、Developer ID 署名・公証、WinTpic 形式の読込は対象外。

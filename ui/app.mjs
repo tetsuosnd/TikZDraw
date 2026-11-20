@@ -17,6 +17,18 @@ import {
   exportTex,
   exampleDocument,
 } from '../core/document.mjs';
+import {
+  PARTICLES,
+  VERTICES,
+  COMPONENTS,
+  SPECIAL_TYPES,
+  POINT_TYPES,
+  specialDefaults,
+  linearControls,
+} from '../core/specials.mjs';
+import { packageExample } from '../core/examples-specials.mjs';
+import { renderSpecial } from './specials.mjs';
+import { importTex } from '../core/import-tex.mjs';
 
 const $ = (selector) => document.querySelector(selector);
 const svgNS = 'http://www.w3.org/2000/svg';
@@ -24,6 +36,30 @@ const canvas = $('#canvas'),
   content = $('#elements'),
   overlay = $('#overlay');
 const bridge = window.desktop;
+const specialTools = [
+  ...Object.entries(PARTICLES)
+    .filter(([k]) => k !== 'anti fermion')
+    .map(([particle, label]) => ({
+      id: `f-${particle}`,
+      label,
+      group: 'feynman',
+      type: 'feynman',
+      props: { particle },
+      geometry: 'straight',
+    })),
+  { id: 'f-curve', label: '曲線の伝播線', group: 'feynman', type: 'feynman', geometry: 'curve' },
+  { id: 'f-loop', label: 'ループ', group: 'feynman', type: 'feynman', geometry: 'loop' },
+  { id: 'f-vertex', label: '頂点', group: 'feynman', type: 'vertex' },
+  ...Object.entries(COMPONENTS).map(([component, label]) => ({
+    id: `c-${component}`,
+    label,
+    group: 'circuit',
+    type: 'circuit',
+    props: { component },
+  })),
+  { id: 'c-ground', label: '接地', group: 'circuit', type: 'ground' },
+  { id: 'c-junction', label: '接続点', group: 'circuit', type: 'junction' },
+];
 const toolDefs = [
   ['select', '選択', 'V', '<path d="M5 2v15l4-4 3 6 3-1-3-6 6-1Z"/>'],
   ['line', '直線', 'L', '<path d="m3 17 14-14"/>'],
@@ -37,6 +73,19 @@ const toolDefs = [
   ['text', '文字', 'T', '<path d="M4 4h12M10 4v14M7 18h6"/>'],
   ['math', '数式', 'M', '<path d="M6 17 10 4q2-3 5-1M5 8h9M4 17q2 3 4 0"/>'],
 ];
+for (const spec of specialTools)
+  toolDefs.push([
+    spec.id,
+    spec.label,
+    '',
+    spec.type === 'vertex' || spec.type === 'junction'
+      ? '<circle cx="10" cy="10" r="3"/>'
+      : spec.type === 'ground'
+        ? '<path d="M10 2v8M3 10h14M5 13h10M8 16h4"/>'
+        : spec.type === 'circuit'
+          ? '<path d="M1 10h4m10 0h4"/><rect x="5" y="7" width="10" height="6"/>'
+          : '<path d="M1 10q3-9 6 0t6 0t6 0"/>',
+  ]);
 const hints = {
   select: '選択して編集 · ドラッグで範囲選択',
   line: 'ドラッグで始点と終点を指定',
@@ -50,6 +99,21 @@ const hints = {
   text: '用紙をクリックして文字を配置',
   math: '用紙をクリックして数式を配置',
 };
+for (const spec of specialTools)
+  hints[spec.id] = POINT_TYPES.includes(spec.type)
+    ? '用紙をクリックして配置 · 設定は右のプロパティ'
+    : 'ドラッグで配置 · 種類とラベルは右のプロパティ';
+let palette = 'basic',
+  toolPreset = null;
+let enabledPalettes = { feynman: false, circuit: false };
+let sourceEditing = false,
+  sourceBase = '';
+const sourceDraftKey = 'tikzdraw.source-draft';
+const sourceDirty = () => sourceEditing && $('#source-editor').value !== sourceBase;
+try {
+  const stored = JSON.parse(localStorage.getItem('tikzdraw.palettes') || '{}');
+  for (const key of Object.keys(enabledPalettes)) enabledPalettes[key] = stored[key] === true;
+} catch {}
 let doc = newDocument(),
   saved = JSON.stringify(doc),
   selection = new Set(),
@@ -66,7 +130,7 @@ let undoStack = [],
 const recoveryKey = 'tikzdraw.recovery.v1';
 const selected = () => doc.elements.filter((e) => selection.has(e.id));
 const editing = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
-const dirty = () => JSON.stringify(doc) !== saved;
+const dirty = () => JSON.stringify(doc) !== saved || sourceDirty();
 function node(tag, attrs = {}, text) {
   const el = document.createElementNS(svgNS, tag);
   Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, String(value)));
@@ -90,6 +154,12 @@ function persist() {
   try {
     if (dirty()) localStorage.setItem(recoveryKey, serializeDocument(doc));
     else localStorage.removeItem(recoveryKey);
+    if (sourceDirty())
+      localStorage.setItem(
+        sourceDraftKey,
+        JSON.stringify({ source: $('#source-editor').value, kind: sourceKind }),
+      );
+    else localStorage.removeItem(sourceDraftKey);
   } catch {}
 }
 function syncState() {
@@ -137,9 +207,18 @@ function history(redo = false) {
 }
 function setTool(value) {
   cancelGesture();
+  const spec = specialTools.find((t) => t.id === value);
+  if (spec && !enabledPalettes[spec.group]) return;
+  if (value !== tool) toolPreset = spec ? { ...specialDefaults(spec.type), ...spec.props } : null;
+  if (spec) palette = spec.group;
+  else if (!['select', 'text', 'math'].includes(value)) palette = 'basic';
   tool = value;
+  $('#palette').value = palette;
   canvas.classList.toggle('drawing', value !== 'select');
   document.querySelectorAll('[data-tool]').forEach((b) => {
+    b.hidden =
+      !['select', 'text', 'math'].includes(b.dataset.tool) &&
+      (b.dataset.group || 'basic') !== palette;
     b.classList.toggle('active', b.dataset.tool === value);
     b.setAttribute('aria-pressed', String(b.dataset.tool === value));
   });
@@ -154,6 +233,7 @@ for (const [id, label, key, icon] of toolDefs) {
     title: `${label} (${key})`,
     'aria-label': label,
     'aria-pressed': 'false',
+    'data-group': specialTools.find((t) => t.id === id)?.group || 'basic',
   });
   const span = html('span', { class: 'tool-icon' });
   span.innerHTML = `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>`;
@@ -161,6 +241,38 @@ for (const [id, label, key, icon] of toolDefs) {
   button.addEventListener('click', () => setTool(id));
   $('#tool-buttons').append(button);
 }
+$('#palette').addEventListener('change', (event) => {
+  commitInputs();
+  palette = event.target.value;
+  setTool('select');
+});
+function refreshPalettes() {
+  const select = $('#palette');
+  select.replaceChildren(html('option', { value: 'basic' }, '通常作図'));
+  for (const [key, label] of [
+    ['feynman', 'Feynman 図'],
+    ['circuit', '回路図'],
+  ]) {
+    if (enabledPalettes[key]) select.append(html('option', { value: key }, label));
+    $('#enable-' + key).checked = enabledPalettes[key];
+  }
+  if (palette !== 'basic' && !enabledPalettes[palette]) {
+    palette = 'basic';
+    tool = 'select';
+    toolPreset = null;
+  }
+  $('[data-action="sample-mixed"]').hidden = !enabledPalettes.feynman && !enabledPalettes.circuit;
+  try {
+    localStorage.setItem('tikzdraw.palettes', JSON.stringify(enabledPalettes));
+  } catch {}
+  bridge?.palettesChanged(enabledPalettes);
+  setTool(tool);
+}
+for (const key of Object.keys(enabledPalettes))
+  $('#enable-' + key).addEventListener('change', (event) => {
+    enabledPalettes[key] = event.target.checked;
+    refreshPalettes();
+  });
 function renderDefs() {
   const defs = $('#defs');
   defs.replaceChildren();
@@ -205,6 +317,25 @@ function drawShape(e, ghost = false) {
     'stroke-linecap': 'round',
     'stroke-linejoin': 'round',
   };
+  if (SPECIAL_TYPES.includes(e.type))
+    return renderSpecial(e, {
+      node,
+      g,
+      attrs,
+      zoom,
+      mathLabel: (text, position) =>
+        g.append(
+          drawShape({
+            ...e,
+            type: 'text',
+            points: [position],
+            text,
+            math: true,
+            fontSize: 10,
+            anchor: 'center',
+          }),
+        ),
+    });
   if (s.dash === 'dashed')
     attrs['stroke-dasharray'] = `${3 * s.width * PT_MM} ${2 * s.width * PT_MM}`;
   if (s.dash === 'dotted') attrs['stroke-dasharray'] = `0 ${2.5 * s.width * PT_MM}`;
@@ -343,7 +474,7 @@ function renderOverlay() {
   }
   if (list.length === 1) {
     const e = list[0];
-    if (e.type === 'bezier') {
+    if (e.type === 'bezier' || e.type === 'feynman') {
       for (const [i, j] of [
         [0, 1],
         [2, 3],
@@ -425,6 +556,10 @@ function render({ inspector = true } = {}) {
   $('#source').textContent = sourceKind === 'tex' ? exportTex(doc) : exportTikz(doc);
   renderLayers();
   if (inspector) renderInspector();
+  if (sourceEditing)
+    $('#properties')
+      .querySelectorAll('input,select,textarea,button')
+      .forEach((el) => (el.disabled = true));
   syncState();
 }
 function renderLayers() {
@@ -579,7 +714,7 @@ function renderInspector() {
         max: 9000,
         change: (v) => change(() => translate(single, 0, v - b.y)),
       });
-      if (single.type !== 'text') {
+      if (!POINT_TYPES.includes(single.type) && single.type !== 'circuit') {
         field(r2, '幅', round(b.width), {
           min: 0.1,
           max: 2000,
@@ -627,13 +762,18 @@ function renderInspector() {
     type: 'color',
     change: (v) => updateStyle('stroke', v),
   });
-  field(colors, '塗りの色', target.fill === 'none' ? '#e5f1ea' : target.fill, {
-    type: 'color',
-    change: (v) => updateStyle('fill', v),
-  });
-  check(row(appearance), '塗りなし', target.fill === 'none', (v) =>
-    updateStyle('fill', v ? 'none' : '#e5f1ea'),
-  );
+  const specialised = list.length
+    ? list.every((e) => SPECIAL_TYPES.includes(e.type))
+    : !!specialTools.find((t) => t.id === tool);
+  if (!specialised) {
+    field(colors, '塗りの色', target.fill === 'none' ? '#e5f1ea' : target.fill, {
+      type: 'color',
+      change: (v) => updateStyle('fill', v),
+    });
+    check(row(appearance), '塗りなし', target.fill === 'none', (v) =>
+      updateStyle('fill', v ? 'none' : '#e5f1ea'),
+    );
+  }
   const lines = row(appearance);
   field(lines, '線幅 / pt', target.width, {
     min: 0.1,
@@ -641,23 +781,31 @@ function renderInspector() {
     step: 0.1,
     change: (v) => updateStyle('width', v),
   });
-  field(lines, '線の種類', target.dash, {
-    options: [
-      ['solid', '実線'],
-      ['dashed', '破線'],
-      ['dotted', '点線'],
-    ],
-    change: (v) => updateStyle('dash', v),
-  });
-  field(row(appearance), '矢印', target.arrow, {
-    options: [
-      ['none', 'なし'],
-      ['end', '終点 →'],
-      ['start', '← 始点'],
-      ['both', '← 両端 →'],
-    ],
-    change: (v) => updateStyle('arrow', v),
-  });
+  if (!specialised) {
+    field(lines, '線の種類', target.dash, {
+      options: [
+        ['solid', '実線'],
+        ['dashed', '破線'],
+        ['dotted', '点線'],
+      ],
+      change: (v) => updateStyle('dash', v),
+    });
+    field(row(appearance), '矢印', target.arrow, {
+      options: [
+        ['none', 'なし'],
+        ['end', '終点 →'],
+        ['start', '← 始点'],
+        ['both', '← 両端 →'],
+      ],
+      change: (v) => updateStyle('arrow', v),
+    });
+  }
+  const spec = specialTools.find((t) => t.id === tool);
+  if (single && SPECIAL_TYPES.includes(single.type)) renderPackageProperties(root, single, true);
+  else if (!list.length && spec) {
+    toolPreset ||= { ...specialDefaults(spec.type), ...spec.props };
+    renderPackageProperties(root, { type: spec.type, ...toolPreset }, false);
+  }
   if (single?.type === 'text') {
     const text = section(root, 'ラベル');
     const input = field(row(text), single.math ? 'LaTeX 数式（$ は不要）' : '文字列', single.text, {
@@ -730,6 +878,130 @@ function renderInspector() {
     root.append(order);
   }
 }
+function renderPackageProperties(root, e, isSelected) {
+  const panel = section(
+    root,
+    e.type === 'feynman' || e.type === 'vertex' ? 'tikz-feynhand' : 'circuitikz',
+  );
+  const set = (key, value) => {
+    if (key === 'rotation') value = Number(value);
+    if (isSelected) change(() => (e[key] = value));
+    else {
+      toolPreset[key] = value;
+      render();
+    }
+  };
+  const choose = (label, key, values) =>
+    field(row(panel), label, e[key], {
+      options: Object.entries(values),
+      change: (v) => set(key, v),
+    });
+  const text = (label, key) => {
+    const input = field(row(panel), label, e[key], { type: 'text', change: (v) => set(key, v) });
+    input.maxLength = 2000;
+  };
+  const size = () =>
+    field(row(panel), '記号サイズ / mm', e.size, {
+      min: e.type === 'circuit' ? 4 : 0.5,
+      max: e.type === 'circuit' ? 40 : e.type === 'junction' ? 10 : 20,
+      step: 0.5,
+      change: (v) => set('size', v),
+    });
+  if (e.type === 'feynman') {
+    choose('粒子の種類', 'particle', PARTICLES);
+    if (isSelected) {
+      const buttons = html('div', { class: 'property-buttons' });
+      for (const [label, geometry] of [
+        ['直線', 'straight'],
+        ['曲線', 'curve'],
+        ['ループ', 'loop'],
+      ]) {
+        const button = html('button', {}, label);
+        button.addEventListener('click', () =>
+          change(() => (e.points = propagatorPoints(e.points[0], e.points[3], geometry))),
+        );
+        buttons.append(button);
+      }
+      panel.append(buttons);
+    }
+    text('粒子名 / LaTeX', 'label');
+    text('運動量 / LaTeX', 'momentum');
+    choose('粒子名の側', 'labelSide', { left: '左側', right: '右側' });
+    choose('運動量の側', 'momentumSide', { left: '左側', right: '右側' });
+    check(row(panel), '運動量の矢印を反転', e.momentumReverse, (v) => set('momentumReverse', v));
+  }
+  if (e.type === 'vertex') {
+    choose('頂点の種類', 'vertexStyle', VERTICES);
+    size();
+    text('頂点ラベル / LaTeX', 'label');
+  }
+  if (e.type === 'circuit') {
+    choose('回路部品', 'component', COMPONENTS);
+    choose('記号の規格', 'standard', { american: '米式', european: '欧式' });
+    size();
+    text('部品名・値 / LaTeX', 'label');
+    text('電圧 / LaTeX', 'voltage');
+    text('電流 / LaTeX', 'current');
+    choose('部品名の側', 'labelSide', { left: '左側', right: '右側' });
+    choose('端子', 'terminals', {
+      none: 'なし',
+      '*-*': '両端 ●',
+      'o-o': '両端 ○',
+      '*-o': '● → ○',
+      'o-*': '○ → ●',
+      '-*': '終点 ●',
+      '*-': '始点 ●',
+      '-o': '終点 ○',
+      'o-': '始点 ○',
+    });
+    check(row(panel), '部品の向きを反転', e.invert, (v) => set('invert', v));
+    panel.append(
+      html(
+        'p',
+        { class: 'property-note' },
+        '端点は青い点をドラッグして調整します。電圧は RP 規約で出力します。',
+      ),
+    );
+  }
+  if (e.type === 'ground')
+    choose('接地記号の向き', 'rotation', {
+      0: '下向き',
+      90: '左向き',
+      180: '上向き',
+      270: '右向き',
+    });
+  if (e.type === 'junction') {
+    size();
+    check(row(panel), '白抜き接続点', e.open, (v) => set('open', v));
+  }
+  panel.append(
+    html(
+      'p',
+      { class: 'property-note' },
+      'ラベルは LaTeX 数式で指定（$ は不要）。画面は編集用の概略表示です。',
+    ),
+  );
+}
+function propagatorPoints(a, b, geometry) {
+  if (geometry === 'loop') {
+    const dx = Math.abs(b.x - a.x) > 1 ? b.x - a.x : 18,
+      dy = Math.abs(b.y - a.y) > 1 ? b.y - a.y : -30;
+    return [
+      a,
+      { x: a.x + dx * 1.6, y: a.y + dy * 1.6 },
+      { x: a.x - dx * 1.6, y: a.y + dy * 1.6 },
+      { ...a },
+    ];
+  }
+  if (Math.hypot(b.x - a.x, b.y - a.y) < 0.1) b = { x: a.x + 30, y: a.y };
+  const points = linearControls(a, b);
+  if (geometry === 'curve')
+    for (const i of [1, 2]) {
+      points[i].x -= (b.y - a.y) * 0.35;
+      points[i].y += (b.x - a.x) * 0.35;
+    }
+  return points;
+}
 function location(event, snap = true) {
   const m = canvas.getScreenCTM();
   if (!m) return { x: 0, y: 0 };
@@ -754,6 +1026,10 @@ function cancelGesture() {
 function updateDraw(p, shift = false) {
   const e = gesture.shape,
     a = e.points[0];
+  if (e.type === 'feynman') {
+    e.points = propagatorPoints(a, p, gesture.geometry);
+    return;
+  }
   if (shift && ['rect', 'ellipse'].includes(e.type)) {
     const size = Math.max(Math.abs(p.x - a.x), Math.abs(p.y - a.y));
     p = { x: a.x + Math.sign(p.x - a.x || 1) * size, y: a.y + Math.sign(p.y - a.y || 1) * size };
@@ -777,10 +1053,11 @@ function updateDraw(p, shift = false) {
   } else e.points[1] = p;
 }
 canvas.addEventListener('pointerdown', (event) => {
-  if (event.button !== 0 || busy) return;
+  if (event.button !== 0 || busy || sourceEditing) return;
   canvas.focus();
   const p = location(event),
     target = event.target.closest('[data-id]');
+  const spec = specialTools.find((t) => t.id === tool);
   if (tool === 'select') {
     if (target?.hasAttribute('data-handle') || target?.hasAttribute('data-angle')) {
       const e = doc.elements.find((e) => e.id === target.dataset.id);
@@ -811,6 +1088,12 @@ canvas.addEventListener('pointerdown', (event) => {
       };
     }
     render();
+  } else if (spec && POINT_TYPES.includes(spec.type)) {
+    const e = Object.assign(makeShape(spec.type, [p], style), toolPreset || spec.props);
+    change(() => doc.elements.push(e));
+    selection = new Set([e.id]);
+    setTool('select');
+    return;
   } else if (tool === 'text' || tool === 'math') {
     const e = makeShape('text', [p], style);
     e.math = tool === 'math';
@@ -831,11 +1114,12 @@ canvas.addEventListener('pointerdown', (event) => {
     syncState();
     return;
   } else {
-    const shape = makeShape(tool === 'arrow' ? 'line' : tool, [p, p], {
+    const shape = makeShape(spec ? spec.type : tool === 'arrow' ? 'line' : tool, [p, p], {
       ...style,
       ...(tool === 'arrow' ? { arrow: 'end' } : {}),
     });
-    gesture = { kind: 'draw', shape, start: p };
+    if (spec) Object.assign(shape, toolPreset || spec.props);
+    gesture = { kind: 'draw', shape, start: p, geometry: spec?.geometry || 'straight' };
     updateDraw(p);
     renderOverlay();
     syncState();
@@ -888,9 +1172,7 @@ canvas.addEventListener('pointerup', (event) => {
   const g = gesture;
   if (g.kind === 'draw') {
     updateDraw(location(event), event.shiftKey);
-    if (
-      Math.hypot(g.shape.points.at(-1).x - g.start.x, g.shape.points.at(-1).y - g.start.y) > 0.05
-    ) {
+    if (Math.hypot(location(event).x - g.start.x, location(event).y - g.start.y) > 0.05) {
       const before = JSON.stringify(doc);
       doc.elements.push(g.shape);
       remember(before);
@@ -968,8 +1250,53 @@ $('#viewport').addEventListener(
 function commitInputs() {
   document.activeElement?.blur();
 }
+function sourceControls() {
+  document
+    .querySelectorAll('[data-source]')
+    .forEach((button) => button.classList.toggle('active', button.dataset.source === sourceKind));
+  $('#source').hidden = sourceEditing;
+  $('#source-editor').hidden = !sourceEditing;
+  $('[data-action="edit-source"]').hidden = sourceEditing;
+  for (const action of ['apply-source', 'cancel-source'])
+    $(`[data-action="${action}"]`).hidden = !sourceEditing;
+  $('#source-panel').classList.toggle('editing-source', sourceEditing);
+}
+function beginSourceEdit(draft) {
+  if (sourceEditing) return;
+  commitInputs();
+  sourceBase = sourceKind === 'tex' ? exportTex(doc) : exportTikz(doc);
+  $('#source-editor').value = draft ?? sourceBase;
+  sourceEditing = true;
+  $('#source-panel').classList.remove('collapsed');
+  sourceControls();
+  render();
+  $('#source-editor').focus();
+}
+function endSourceEdit() {
+  sourceEditing = false;
+  sourceBase = '';
+  sourceControls();
+  try {
+    localStorage.removeItem(sourceDraftKey);
+  } catch {}
+}
+function applySource() {
+  try {
+    const parsed = importTex($('#source-editor').value, { name: doc.name });
+    endSourceEdit();
+    selection.clear();
+    change(() => (doc = parsed));
+    toast('ソースを図に反映しました');
+    return true;
+  } catch (error) {
+    toast(error.message);
+    return false;
+  }
+}
+$('#source-editor').addEventListener('input', () => syncState());
 async function save(saveAs = false) {
   commitInputs();
+  if (sourceEditing && !applySource()) return false;
   const source = serializeDocument(doc);
   if (!bridge) {
     toast('保存は Electron のアプリからご利用ください。');
@@ -999,6 +1326,7 @@ async function canReplace() {
   return choice === 'discard';
 }
 function replaceDocument(value, { asSaved = false } = {}) {
+  endSourceEdit();
   cancelGesture();
   doc = value;
   undoStack = [];
@@ -1010,9 +1338,38 @@ function replaceDocument(value, { asSaved = false } = {}) {
   fit();
 }
 async function command(action) {
+  if (action === 'edit-source') {
+    beginSourceEdit();
+    return;
+  }
+  if (action === 'apply-source') {
+    applySource();
+    return;
+  }
+  if (action === 'cancel-source') {
+    endSourceEdit();
+    render();
+    return;
+  }
+  if (action.startsWith('toggle-palette-')) {
+    const key = action.slice('toggle-palette-'.length);
+    if (Object.hasOwn(enabledPalettes, key)) {
+      enabledPalettes[key] = !enabledPalettes[key];
+      refreshPalettes();
+    }
+    return;
+  }
+  if (action === 'palette-options') {
+    $('#palette-dialog').showModal();
+    return;
+  }
+  if (action === 'close-palettes') {
+    $('#palette-dialog').close();
+    return;
+  }
   // Blur commits inspector edits before destructive commands or file operations.
   if (!['undo', 'redo', 'select-all'].includes(action)) commitInputs();
-  if (['new', 'sample', 'open'].includes(action)) {
+  if (['new', 'sample', 'sample-current', 'sample-mixed', 'open'].includes(action)) {
     if (busy) return;
     busy = true;
     try {
@@ -1028,14 +1385,23 @@ async function command(action) {
           return;
         }
         if (result.canceled) return;
-        replaceDocument(result.doc, { asSaved: true });
+        replaceDocument(result.doc, { asSaved: result.kind !== 'tex' });
         toast('図を開きました');
       } else {
         bridge?.newPath();
-        replaceDocument(action === 'new' ? newDocument() : exampleDocument(), {
-          asSaved: action === 'new',
-        });
-        toast(action === 'sample' ? 'サンプルを開きました' : '新しい図を作成しました');
+        replaceDocument(
+          action === 'new'
+            ? newDocument()
+            : action === 'sample-mixed'
+              ? packageExample('mixed')
+              : action === 'sample-current' && palette !== 'basic'
+                ? packageExample(palette)
+                : exampleDocument(),
+          {
+            asSaved: action === 'new',
+          },
+        );
+        toast(action !== 'new' ? 'サンプルを開きました' : '新しい図を作成しました');
       }
     } finally {
       busy = false;
@@ -1052,10 +1418,12 @@ async function command(action) {
   }
   if (action === 'discard-and-close') {
     localStorage.removeItem(recoveryKey);
+    localStorage.removeItem(sourceDraftKey);
     bridge?.close();
     return;
   }
   if (action === 'export-tikz' || action === 'export-tex' || action === 'export-source') {
+    if (sourceEditing && !applySource()) return;
     const kind = action === 'export-source' ? sourceKind : action === 'export-tex' ? 'tex' : 'tikz',
       result = await bridge?.export(serializeDocument(doc), kind);
     if (result?.error) toast(result.error);
@@ -1107,7 +1475,13 @@ async function command(action) {
   }
   if (action === 'copy-source')
     try {
-      await navigator.clipboard.writeText(sourceKind === 'tex' ? exportTex(doc) : exportTikz(doc));
+      await navigator.clipboard.writeText(
+        sourceEditing
+          ? $('#source-editor').value
+          : sourceKind === 'tex'
+            ? exportTex(doc)
+            : exportTikz(doc),
+      );
       toast('ソースをコピーしました');
     } catch {
       const sel = window.getSelection();
@@ -1126,6 +1500,10 @@ document
   );
 document.querySelectorAll('[data-source]').forEach((button) =>
   button.addEventListener('click', () => {
+    if (sourceEditing) {
+      toast('ソースを図に反映するか、取消してから切り替えてください。');
+      return;
+    }
     sourceKind = button.dataset.source;
     document
       .querySelectorAll('[data-source]')
@@ -1148,7 +1526,7 @@ document.addEventListener('input', (event) => {
 });
 $('#show-grid').addEventListener('change', () => render({ inspector: false }));
 window.addEventListener('keydown', (event) => {
-  if ($('#help-dialog').open) return;
+  if ($('#help-dialog').open || $('#palette-dialog').open) return;
   if (editing()) return;
   if (event.key === 'Escape') {
     event.preventDefault();
@@ -1226,7 +1604,22 @@ try {
 } catch {
   localStorage.removeItem(recoveryKey);
 }
-setTool('select');
+const sourceRecovery = localStorage.getItem(sourceDraftKey);
+refreshPalettes();
+try {
+  if (sourceRecovery) {
+    const draft = JSON.parse(sourceRecovery);
+    if (typeof draft.source === 'string' && draft.source.length <= 2_000_000) {
+      sourceKind = draft.kind === 'tex' ? 'tex' : 'tikz';
+      beginSourceEdit(draft.source);
+      sourceBase = '';
+      syncState();
+      toast('編集中のソースを復元しました。反映または保存してください。');
+    }
+  }
+} catch {
+  localStorage.removeItem(sourceDraftKey);
+}
 requestAnimationFrame(fit);
 // Read-only inspection surface for the automated integration checks.
 Object.defineProperty(window, 'tikzDrawState', {

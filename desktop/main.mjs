@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { parseDocument, serializeDocument, exportTex, exportTikz } from '../core/document.mjs';
+import { importTex } from '../core/import-tex.mjs';
 
 app.setName('TikZ Draw');
 let win,
@@ -59,6 +60,7 @@ export async function createWindow(options = {}) {
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: true,
+      backgroundThrottling: options.show !== false,
     },
   });
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -80,16 +82,20 @@ export async function createWindow(options = {}) {
     const chosen = await dialog.showOpenDialog(win, {
       title: '図を開く',
       properties: ['openFile'],
-      filters: [{ name: 'TikZ Draw', extensions: ['tikzdraw', 'json'] }],
+      filters: [{ name: '図・TikZ・TeX', extensions: ['tikzdraw', 'json', 'tikz', 'tex'] }],
     });
     if (chosen.canceled) return { canceled: true };
     const selected = chosen.filePaths[0];
     if ((await stat(selected)).size > 20_000_000)
       throw new Error('20 MB 以下のファイルを選んでください。');
-    const doc = parseDocument(await readFile(selected, 'utf8'));
-    currentPath = selected;
-    win.setRepresentedFilename(selected);
-    return { doc, path: selected };
+    const source = await readFile(selected, 'utf8'),
+      isProject = /\.(tikzdraw|json)$/i.test(selected);
+    const doc = isProject
+      ? parseDocument(source)
+      : importTex(source, { name: path.basename(selected, path.extname(selected)) });
+    currentPath = isProject ? selected : null;
+    win.setRepresentedFilename(currentPath || '');
+    return { doc, path: selected, kind: isProject ? 'project' : 'tex' };
   });
   handle('document:save', async ({ source, saveAs }) => {
     const doc = parseDocument(source);
@@ -125,6 +131,13 @@ export async function createWindow(options = {}) {
     trusted(event);
     dirty = !!value;
     win.setDocumentEdited(dirty);
+  });
+  ipcMain.on('palettes:changed', (event, value) => {
+    trusted(event);
+    for (const key of ['feynman', 'circuit']) {
+      const item = Menu.getApplicationMenu()?.getMenuItemById(`palette-${key}`);
+      if (item) item.checked = value?.[key] === true;
+    }
   });
   ipcMain.on('document:close', (event) => {
     trusted(event);
@@ -187,6 +200,21 @@ export async function createWindow(options = {}) {
       {
         label: '表示',
         submenu: [
+          {
+            id: 'palette-feynman',
+            label: 'Feynman 図パレット',
+            type: 'checkbox',
+            checked: false,
+            click: send('toggle-palette-feynman'),
+          },
+          {
+            id: 'palette-circuit',
+            label: '回路図パレット',
+            type: 'checkbox',
+            checked: false,
+            click: send('toggle-palette-circuit'),
+          },
+          { type: 'separator' },
           { label: '拡大', accelerator: 'CmdOrCtrl+Plus', click: send('zoom-in') },
           { label: '縮小', accelerator: 'CmdOrCtrl+-', click: send('zoom-out') },
           { label: '用紙を全体表示', accelerator: 'CmdOrCtrl+0', click: send('zoom-fit') },

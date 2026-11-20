@@ -2,12 +2,19 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { packageExample } from '../core/examples-specials.mjs';
+import { exportTex } from '../core/document.mjs';
+import { importTex } from '../core/import-tex.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 process.chdir(root);
 await import('./examples.mjs');
 const cache = path.join(root, 'test-output/tex-cache');
 await mkdir(cache, { recursive: true });
 const env = { ...process.env, TEXMFVAR: cache, TEXMFCACHE: cache };
+const changedSource = exportTex(packageExample('mixed'))
+  .replace('to[R,', 'to[L,')
+  .replace('{$R_1$}', '{$L_1$}');
+await writeFile('test-output/source-edit.tex', exportTex(importTex(changedSource)));
 await writeFile(
   'test-output/fragment.tex',
   '\\documentclass{article}\n\\usepackage[a4paper,margin=20mm]{geometry}\n\\usepackage{tikz,amsmath,amssymb}\n\\usetikzlibrary{arrows.meta}\n\\pagestyle{empty}\n\\begin{document}\n\\centering\\input{examples/circle-tangent.tikz}\n\\end{document}\n',
@@ -17,6 +24,13 @@ const jobs = [
   ['pdflatex', 'examples/all-shapes.tex', 'examples'],
   ['lualatex', 'examples/japanese.tex', 'examples'],
   ['pdflatex', 'test-output/fragment.tex', 'test-output'],
+  ...['feynman', 'circuit', 'mixed', 'package-catalog'].map((name) => [
+    'pdflatex',
+    `examples/${name}.tex`,
+    'examples',
+  ]),
+  ['pdflatex', 'test-output/source-edit.tex', 'test-output'],
+  ['lualatex', 'examples/japanese-packages.tex', 'examples'],
 ];
 for (const [engine, file, out] of jobs) {
   const start = performance.now();

@@ -1,4 +1,4 @@
-import { app, dialog, clipboard } from 'electron';
+import { app, dialog, Menu } from 'electron';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { mkdtempSync } from 'node:fs';
@@ -59,6 +59,9 @@ app.whenReady().then(async () => {
       assert.equal(await js('typeof require'), 'undefined');
       assert.equal(await js('typeof katex.render'), 'function');
       assert.equal((await state()).doc.elements.length, 0);
+      assert.equal(await js("document.querySelector('#palette').options.length"), 1);
+      assert.equal(await js('document.querySelector(\'[data-tool="f-photon"]\').hidden'), true);
+      assert.equal(Menu.getApplicationMenu().getMenuItemById('palette-circuit').checked, false);
     });
     await check('draw a line, undo and redo through native menu commands', async () => {
       await click('[data-tool="line"]');
@@ -302,6 +305,202 @@ app.whenReady().then(async () => {
           path.join(root, 'test-output/desktop-small.png'),
           (await wc.capturePage()).toPNG(),
         );
+      },
+    );
+    const setValue = async (label, value) => {
+      await js(
+        `(()=>{const e=document.querySelector('[aria-label='+${JSON.stringify(JSON.stringify(label))}+']');e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('change',{bubbles:true}));})()`,
+      );
+      await delay(60);
+    };
+    await check(
+      'optional palettes can be enabled independently and hidden without changing the drawing',
+      async () => {
+        win.setSize(1420, 920);
+        await delay(100);
+        wc.send('command', 'zoom-fit');
+        await delay(60);
+        const before = (await state()).doc;
+        await click('[data-action="palette-options"]');
+        await click('#enable-feynman');
+        await click('[data-action="close-palettes"]');
+        assert.equal(await js("!!document.querySelector('#palette option[value=feynman]')"), true);
+        assert.equal(await js("!!document.querySelector('#palette option[value=circuit]')"), false);
+        assert.equal(Menu.getApplicationMenu().getMenuItemById('palette-feynman').checked, true);
+        assert.deepEqual((await state()).doc, before);
+        await setValue('作図パレット', 'feynman');
+        assert.equal(await js('document.querySelector(\'[data-tool="f-photon"]\').hidden'), false);
+      },
+    );
+    await check(
+      'FeynHand palette draws photons, curves, closed loops and editable vertices',
+      async () => {
+        await click('[data-tool="f-photon"]');
+        await drag([15, 15], [55, 15]);
+        let e = (await state()).doc.elements.at(-1);
+        assert.equal(e.type, 'feynman');
+        assert.equal(e.particle, 'photon');
+        await setValue('運動量 / LaTeX', 'q');
+        await setValue('粒子名 / LaTeX', '\\gamma');
+        assert.equal((await state()).doc.elements.at(-1).momentum, 'q');
+        await click('[data-tool="f-curve"]');
+        await drag([65, 30], [105, 30]);
+        e = (await state()).doc.elements.at(-1);
+        assert.equal(e.type, 'feynman');
+        assert.notEqual(e.points[1].y, e.points[0].y);
+        await setValue('粒子の種類', 'anti fermion');
+        assert.equal((await state()).doc.elements.at(-1).particle, 'anti fermion');
+        await click('[data-tool="f-loop"]');
+        await drag([125, 75], [135, 55]);
+        e = (await state()).doc.elements.at(-1);
+        assert.deepEqual(e.points[0], e.points[3]);
+        await click('[data-tool="f-vertex"]');
+        await point(125, 75);
+        assert.equal((await state()).doc.elements.at(-1).type, 'vertex');
+        await setValue('頂点の種類', 'ringdot');
+        assert.equal((await state()).doc.elements.at(-1).vertexStyle, 'ringdot');
+        assert.ok(
+          (await js("document.querySelector('#source').textContent")).includes('\\begin{feynhand}'),
+        );
+      },
+    );
+    await check(
+      'circuit palette edits component standard, labels, terminals and ground orientation',
+      async () => {
+        wc.send('command', 'toggle-palette-circuit');
+        await delay(80);
+        await setValue('作図パレット', 'circuit');
+        await click('[data-tool="c-R"]');
+        await drag([20, 80], [70, 80]);
+        assert.equal((await state()).doc.elements.at(-1).component, 'R');
+        await setValue('記号の規格', 'european');
+        await setValue('部品名・値 / LaTeX', 'R_1');
+        await setValue('電圧 / LaTeX', 'U');
+        await setValue('電流 / LaTeX', 'I');
+        await setValue('端子', '*-o');
+        const e = (await state()).doc.elements.at(-1);
+        assert.equal(e.standard, 'european');
+        assert.equal(e.label, 'R_1');
+        assert.equal(e.terminals, '*-o');
+        assert.equal(e.current, 'I');
+        await click('[data-tool="c-ground"]');
+        await point(20, 80);
+        await setValue('接地記号の向き', '90');
+        assert.equal((await state()).doc.elements.at(-1).rotation, 90);
+        await click('[data-tool="c-junction"]');
+        await point(70, 80);
+        assert.equal((await state()).doc.elements.at(-1).type, 'junction');
+        const before = (await state()).doc;
+        wc.send('command', 'toggle-palette-feynman');
+        await delay(80);
+        assert.deepEqual((await state()).doc, before);
+        assert.equal(await js('document.querySelector(\'[data-tool="f-photon"]\').hidden'), true);
+      },
+    );
+    await check('specialty figures round-trip through native project save and reopen', async () => {
+      const file = path.join(temp, 'specials.tikzdraw');
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
+      wc.send('command', 'save-as');
+      await delay(150);
+      const before = (await state()).doc;
+      wc.send('command', 'new');
+      await delay(90);
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+      await click('[data-action="open"]');
+      await delay(130);
+      assert.deepEqual((await state()).doc, before);
+    });
+    await check(
+      'opening TeX imports editable objects and saving never overwrites the TeX file',
+      async () => {
+        const source =
+            '\\begin{circuitikz}[american]\\draw (0,0) to[R,l={$R_1$}] (4,0);\\end{circuitikz}',
+          file = path.join(temp, 'import.tex');
+        await writeFile(file, source);
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] });
+        await click('[data-action="open"]');
+        await delay(130);
+        assert.equal((await state()).doc.elements[0].component, 'R');
+        assert.equal((await state()).dirty, true);
+        let asked = 0;
+        dialog.showSaveDialog = async () => {
+          asked++;
+          return { canceled: false, filePath: path.join(temp, 'import.tikzdraw') };
+        };
+        await click('[data-action="save"]');
+        await delay(130);
+        assert.equal(asked, 1);
+        assert.equal(await readFile(file, 'utf8'), source);
+      },
+    );
+    await check(
+      'editing source updates actual components and coordinates and remains undoable',
+      async () => {
+        await click('[data-action="edit-source"]');
+        await js(
+          `(()=>{const e=document.querySelector('#source-editor');e.value=e.value.replace('to[R,','to[C,').replace('{$R_1$}','{$C_1$}');e.dispatchEvent(new Event('input',{bubbles:true}));})()`,
+        );
+        await click('[data-action="apply-source"]');
+        assert.equal((await state()).doc.elements[0].component, 'C');
+        assert.equal((await state()).doc.elements[0].label, 'C_1');
+        wc.send('command', 'undo');
+        await delay(70);
+        assert.equal((await state()).doc.elements[0].component, 'R');
+      },
+    );
+    await check(
+      'unsupported source retains the old figure and editable draft; cancel and Close are safe',
+      async () => {
+        const before = (await state()).doc;
+        await click('[data-action="edit-source"]');
+        await js(
+          `(()=>{const e=document.querySelector('#source-editor');e.value+='\\n\\\\foreach \\\\x in {1,2} {}';e.dispatchEvent(new Event('input',{bubbles:true}));})()`,
+        );
+        await click('[data-action="apply-source"]');
+        assert.deepEqual((await state()).doc, before);
+        assert.equal(await js("document.querySelector('#source-editor').hidden"), false);
+        assert.ok(
+          (await js("document.querySelector('#toast').textContent")).includes('読み込めません'),
+        );
+        let asked = 0;
+        dialog.showMessageBoxSync = () => {
+          asked++;
+          return 2;
+        };
+        win.close();
+        await delay(60);
+        assert.equal(asked, 1);
+        assert.equal(win.isDestroyed(), false);
+        await click('[data-action="cancel-source"]');
+        assert.deepEqual((await state()).doc, before);
+        assert.equal((await state()).dirty, false);
+      },
+    );
+    await check(
+      'package examples and optional palettes display in the final desktop layout',
+      async () => {
+        dialog.showMessageBoxSync = () => 1;
+        wc.send('command', 'toggle-palette-feynman');
+        await delay(60);
+        for (const kind of ['feynman', 'circuit']) {
+          await setValue('作図パレット', kind);
+          await click('[data-action="sample-current"]');
+          await delay(100);
+          await js("document.querySelector('#toast').classList.remove('visible')");
+          await delay(220);
+          await js(
+            'new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))',
+          );
+          await writeFile(
+            path.join(root, `test-output/${kind}-desktop.png`),
+            (await wc.capturePage()).toPNG(),
+          );
+          assert.ok(
+            (await state()).doc.elements.some(
+              (e) => e.type === (kind === 'feynman' ? 'feynman' : 'circuit'),
+            ),
+          );
+        }
       },
     );
     assert.deepEqual(errors, []);

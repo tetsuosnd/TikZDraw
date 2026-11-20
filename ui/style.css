@@ -801,3 +801,53 @@ code {
 :root .tools {
   overflow-y: auto;
 }
+[hidden] {
+  display: none !important;
+}
+#palette {
+  width: 100%;
+  padding: 8px 3px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: white;
+  font-size: 11px;
+}
+.palette-options {
+  font-size: 10px;
+  padding: 7px 3px;
+  margin-bottom: 9px;
+  white-space: nowrap;
+}
+.tool-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#source-editor {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  border: 0;
+  background: #fbfff8;
+  color: #334e41;
+  outline: none;
+  padding: 12px 20px;
+  font:
+    11px/1.8 'SFMono-Regular',
+    Consolas,
+    monospace;
+  tab-size: 2;
+  white-space: pre;
+}
+.source-panel.editing-source {
+  height: 310px;
+}
+.source-panel.editing-source .source-header {
+  background: #edf5e9;
+}
+
+.tool[data-group='feynman'] > span:nth-child(2) {
+  font-size: 10px;
+  white-space: nowrap;
+}

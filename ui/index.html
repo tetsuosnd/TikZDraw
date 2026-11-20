@@ -18,7 +18,7 @@
       <div class="brand">
         <span class="brand-icon">T<span>z</span></span>
         <div><b>TikZ Draw</b><small>図を描く。TeXにつなぐ。</small></div>
-        <span class="version">0.1</span>
+        <span class="version">0.2</span>
       </div>
       <div class="file-title">
         <input id="document-name" aria-label="図の名前" value="無題" maxlength="200" /><span
@@ -36,6 +36,12 @@
     </header>
     <div class="workspace">
       <aside class="tools">
+        <button data-action="palette-options" class="palette-options">追加パレット…</button>
+        <select id="palette" aria-label="作図パレット">
+          <option value="basic">通常作図</option>
+          <option value="feynman">Feynman 図</option>
+          <option value="circuit">回路図</option>
+        </select>
         <div class="section-label">描画ツール</div>
         <div id="tool-buttons"></div>
         <div class="tool-divider"></div>
@@ -44,7 +50,11 @@
         ><button class="tool secondary-tool" data-action="redo" title="やり直す ⇧⌘Z">
           <span class="tool-icon">↷</span><span>やり直す</span>
         </button>
-        <div class="tool-bottom"><button data-action="help">?　使い方</button></div>
+        <div class="tool-bottom">
+          <button data-action="sample-current">作図例を開く ↗</button
+          ><button data-action="sample-mixed">混在図の例 ↗</button
+          ><button data-action="help">?　使い方</button>
+        </div>
       </aside>
       <main class="editor">
         <div class="canvas-bar">
@@ -106,6 +116,9 @@
             </div>
             <div>
               <button data-action="copy-source" id="copy-source">コピー</button
+              ><button data-action="edit-source">ソースを編集</button
+              ><button data-action="apply-source" hidden>図に反映</button
+              ><button data-action="cancel-source" hidden>取消</button
               ><button data-action="export-source">ファイルに書き出す ↗</button
               ><button data-action="toggle-source" id="toggle-source" title="ソースの表示切替">
                 ⌄
@@ -113,6 +126,12 @@
             </div>
           </div>
           <pre id="source" aria-label="生成されたソース"></pre>
+          <textarea
+            id="source-editor"
+            aria-label="TikZ・TeX ソースを編集"
+            spellcheck="false"
+            hidden
+          ></textarea>
         </section>
         <footer class="statusbar">
           <span id="status">準備ができました</span>
@@ -128,6 +147,20 @@
       </aside>
     </div>
     <div id="toast" role="status"></div>
+    <dialog id="palette-dialog">
+      <div class="dialog-title">
+        <h2>追加パレット</h2>
+        <button data-action="close-palettes" aria-label="閉じる">×</button>
+      </div>
+      <p>必要なパレットを個別に表示できます。通常作図はいつでも使えます。</p>
+      <p>
+        <label><input type="checkbox" id="enable-feynman" /> Feynman 図（tikz-feynhand）</label>
+      </p>
+      <p>
+        <label><input type="checkbox" id="enable-circuit" /> 回路図（circuitikz）</label>
+      </p>
+      <button class="primary" data-action="close-palettes">閉じる</button>
+    </dialog>
     <dialog id="help-dialog">
       <div class="dialog-title">
         <h2>TikZ Draw の使い方</h2>
@@ -156,6 +189,22 @@
           中止
         </dd>
         <dt>保存と書き出し</dt>
+        <dd>
+          左上のパレットで通常作図・Feynman
+          図・回路図を切り替えます。異なるパレットの図形は同じ用紙で混在できます。粒子・部品の種類やラベルは右のプロパティで変更します。
+        </dd>
+        <dt>専門図形</dt>
+        <dd>
+          伝播線の直線・曲線・ループを切替でき、曲線は制御点で編集します。回路部品は端点をドラッグで調整します。各ラベルは
+          LaTeX 数式で指定し、$ は付けません。
+        </dd>
+        <dt>パッケージ</dt>
+        <dd>
+          必要な tikz-feynhand / circuitikz を単体 TeX
+          のプリアンブルに自動指定します。画面の専門記号は概略表示で、最終的な形状・ラベル配置は TeX
+          側で確認してください。
+        </dd>
+        <dt>再編集用ファイル</dt>
         <dd>
           <code>.tikzdraw</code> は再編集用。<code>.tikz</code> は本文へ読み込む図、<code
             >.tex</code
