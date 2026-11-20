@@ -1,0 +1,245 @@
+{
+  "format": "tikz-draw",
+  "version": 1,
+  "name": "円と接線",
+  "page": {
+    "width": 160,
+    "height": 100,
+    "grid": 5
+  },
+  "elements": [
+    {
+      "id": "example-1",
+      "type": "line",
+      "points": [
+        {
+          "x": 20,
+          "y": 75
+        },
+        {
+          "x": 140,
+          "y": 75
+        }
+      ],
+      "style": {
+        "stroke": "#9aa6af",
+        "fill": "none",
+        "width": 0.6,
+        "dash": "solid",
+        "arrow": "end"
+      }
+    },
+    {
+      "id": "example-2",
+      "type": "line",
+      "points": [
+        {
+          "x": 40,
+          "y": 90
+        },
+        {
+          "x": 40,
+          "y": 12
+        }
+      ],
+      "style": {
+        "stroke": "#9aa6af",
+        "fill": "none",
+        "width": 0.6,
+        "dash": "solid",
+        "arrow": "end"
+      }
+    },
+    {
+      "id": "example-3",
+      "type": "circle",
+      "points": [
+        {
+          "x": 75,
+          "y": 50
+        },
+        {
+          "x": 100,
+          "y": 50
+        }
+      ],
+      "style": {
+        "stroke": "#1f6b62",
+        "fill": "#eff7f5",
+        "width": 1.1,
+        "dash": "solid",
+        "arrow": "none"
+      }
+    },
+    {
+      "id": "example-4",
+      "type": "line",
+      "points": [
+        {
+          "x": 75,
+          "y": 50
+        },
+        {
+          "x": 95,
+          "y": 35
+        }
+      ],
+      "style": {
+        "stroke": "#1f6b62",
+        "fill": "none",
+        "width": 0.7,
+        "dash": "dashed",
+        "arrow": "none"
+      }
+    },
+    {
+      "id": "example-5",
+      "type": "line",
+      "points": [
+        {
+          "x": 80,
+          "y": 15
+        },
+        {
+          "x": 110,
+          "y": 55
+        }
+      ],
+      "style": {
+        "stroke": "#c57542",
+        "fill": "none",
+        "width": 1.2,
+        "dash": "solid",
+        "arrow": "none"
+      }
+    },
+    {
+      "id": "example-6",
+      "type": "arc",
+      "points": [
+        {
+          "x": 75,
+          "y": 50
+        },
+        {
+          "x": 84,
+          "y": 50
+        }
+      ],
+      "style": {
+        "stroke": "#1f6b62",
+        "fill": "none",
+        "width": 0.6,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "startAngle": 0,
+      "endAngle": 36.87
+    },
+    {
+      "id": "example-7",
+      "type": "text",
+      "points": [
+        {
+          "x": 85,
+          "y": 45
+        }
+      ],
+      "style": {
+        "stroke": "#1f6b62",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "text": "r",
+      "math": true,
+      "fontSize": 14,
+      "anchor": "center"
+    },
+    {
+      "id": "example-8",
+      "type": "text",
+      "points": [
+        {
+          "x": 103,
+          "y": 31
+        }
+      ],
+      "style": {
+        "stroke": "#c57542",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "text": "P",
+      "math": true,
+      "fontSize": 14,
+      "anchor": "center"
+    },
+    {
+      "id": "example-9",
+      "type": "text",
+      "points": [
+        {
+          "x": 75,
+          "y": 54
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "text": "O",
+      "math": true,
+      "fontSize": 12,
+      "anchor": "center"
+    },
+    {
+      "id": "example-10",
+      "type": "text",
+      "points": [
+        {
+          "x": 141,
+          "y": 79
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "text": "x",
+      "math": true,
+      "fontSize": 12,
+      "anchor": "center"
+    },
+    {
+      "id": "example-11",
+      "type": "text",
+      "points": [
+        {
+          "x": 35,
+          "y": 13
+        }
+      ],
+      "style": {
+        "stroke": "#263544",
+        "fill": "none",
+        "width": 0.8,
+        "dash": "solid",
+        "arrow": "none"
+      },
+      "text": "y",
+      "math": true,
+      "fontSize": 12,
+      "anchor": "center"
+    }
+  ]
+}

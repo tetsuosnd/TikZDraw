@@ -1,0 +1,26 @@
+{
+  "name": "tikz-draw",
+  "productName": "TikZ Draw",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "desktop/main.mjs",
+  "description": "A desktop drawing editor that exports editable TikZ source.",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.mjs",
+    "test:desktop": "electron test/desktop.mjs",
+    "test:tex": "node scripts/check-tex.mjs",
+    "format": "prettier --write core desktop ui scripts test package.json package-lock.json",
+    "format:check": "prettier --check core desktop ui scripts test package.json package-lock.json",
+    "build:mac": "node scripts/build-mac.mjs",
+    "examples": "node scripts/examples.mjs"
+  },
+  "dependencies": {
+    "katex": "0.16.22"
+  },
+  "devDependencies": {
+    "electron": "45.4.1",
+    "prettier": "3.10.1"
+  }
+}

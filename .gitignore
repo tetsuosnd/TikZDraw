@@ -1,0 +1,10 @@
+node_modules/
+dist/
+test-output/
+.DS_Store
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz

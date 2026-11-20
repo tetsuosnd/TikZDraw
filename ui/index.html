@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"
+    />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>TikZ Draw</title>
+    <link rel="stylesheet" href="../node_modules/katex/dist/katex.min.css" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="../node_modules/katex/dist/katex.min.js" defer></script>
+    <script type="module" src="app.mjs"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon">T<span>z</span></span>
+        <div><b>TikZ Draw</b><small>図を描く。TeXにつなぐ。</small></div>
+        <span class="version">0.1</span>
+      </div>
+      <div class="file-title">
+        <input id="document-name" aria-label="図の名前" value="無題" maxlength="200" /><span
+          id="save-status"
+          >保存済み</span
+        >
+      </div>
+      <div class="header-actions">
+        <button data-action="open" title="開く ⌘O">開く</button
+        ><button data-action="save" title="保存 ⌘S">保存</button
+        ><button data-action="export-tikz" class="primary" title="TikZ を書き出す ⌘E">
+          <span>↗</span> TikZ 書き出し
+        </button>
+      </div>
+    </header>
+    <div class="workspace">
+      <aside class="tools">
+        <div class="section-label">描画ツール</div>
+        <div id="tool-buttons"></div>
+        <div class="tool-divider"></div>
+        <button class="tool secondary-tool" data-action="undo" title="元に戻す ⌘Z">
+          <span class="tool-icon">↶</span><span>元に戻す</span></button
+        ><button class="tool secondary-tool" data-action="redo" title="やり直す ⇧⌘Z">
+          <span class="tool-icon">↷</span><span>やり直す</span>
+        </button>
+        <div class="tool-bottom"><button data-action="help">?　使い方</button></div>
+      </aside>
+      <main class="editor">
+        <div class="canvas-bar">
+          <div>
+            <span class="live-dot"></span
+            ><span id="tool-hint">選択して編集 · ドラッグで範囲選択</span>
+          </div>
+          <div class="view-controls">
+            <label><input type="checkbox" id="show-grid" checked /> グリッド</label
+            ><label><input type="checkbox" id="snap-grid" checked /> 吸着</label
+            ><span class="bar-divider"></span
+            ><button data-action="zoom-out" aria-label="縮小">−</button
+            ><button data-action="zoom-fit" id="zoom-value" title="用紙を全体表示">100%</button
+            ><button data-action="zoom-in" aria-label="拡大">＋</button>
+          </div>
+        </div>
+        <div class="canvas-viewport" id="viewport">
+          <div class="paper-wrap" id="paper-wrap">
+            <div class="paper-caption">
+              <span>DRAWING / <span id="paper-name">無題</span></span
+              ><span id="paper-size">160 × 100 mm</span>
+            </div>
+            <svg
+              id="canvas"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 160 100"
+              aria-label="描画キャンバス"
+              tabindex="0"
+            >
+              <defs id="defs"></defs>
+              <rect id="paper" x="0" y="0" width="160" height="100" fill="white" />
+              <rect
+                id="grid"
+                x="0"
+                y="0"
+                width="160"
+                height="100"
+                fill="url(#grid-pattern)"
+                pointer-events="none"
+              />
+              <g id="elements"></g>
+              <g id="overlay"></g>
+            </svg>
+            <div class="paper-footer">
+              <span>1 単位 = 1 mm</span><span>SVG canvas → TikZ source</span>
+            </div>
+          </div>
+          <div class="empty-note" id="empty-note">
+            <b>最初の線を、ここから。</b
+            ><span>左のツールを選び、用紙をドラッグして作図します。</span
+            ><button data-action="sample">サンプルの図を開く ↗</button>
+          </div>
+        </div>
+        <section class="source-panel" id="source-panel">
+          <div class="source-header">
+            <div class="source-tabs">
+              <button data-source="tikz" class="active">TikZ ソース</button
+              ><button data-source="tex">単体 TeX</button>
+            </div>
+            <div>
+              <button data-action="copy-source" id="copy-source">コピー</button
+              ><button data-action="export-source">ファイルに書き出す ↗</button
+              ><button data-action="toggle-source" id="toggle-source" title="ソースの表示切替">
+                ⌄
+              </button>
+            </div>
+          </div>
+          <pre id="source" aria-label="生成されたソース"></pre>
+        </section>
+        <footer class="statusbar">
+          <span id="status">準備ができました</span>
+          <div><span id="coordinates">x —　y — mm</span><span id="element-count">0 図形</span></div>
+        </footer>
+      </main>
+      <aside class="inspector">
+        <div class="inspector-title">プロパティ<span id="selection-badge">用紙</span></div>
+        <div id="properties"></div>
+        <div class="layers-heading"><span>オブジェクト</span><span id="layer-count">0</span></div>
+        <div id="layers"></div>
+        <div class="inspector-footer">ローカルで作成・保存<br />数式は KaTeX で編集時表示</div>
+      </aside>
+    </div>
+    <div id="toast" role="status"></div>
+    <dialog id="help-dialog">
+      <div class="dialog-title">
+        <h2>TikZ Draw の使い方</h2>
+        <button data-action="close-help" aria-label="閉じる">×</button>
+      </div>
+      <p>図形をマウスで描き、右のプロパティで仕上げます。</p>
+      <dl>
+        <dt>直線・長方形・円・楕円・曲線</dt>
+        <dd>用紙をドラッグ。円・円弧は中心から半径を指定します。</dd>
+        <dt>折れ線</dt>
+        <dd>頂点を順にクリックし、Enter またはダブルクリックで確定。</dd>
+        <dt>選択・編集</dt>
+        <dd>
+          クリックで選択、Shift
+          で追加選択。ドラッグで移動。空白のドラッグで範囲選択。青い点を動かして形を編集します。
+        </dd>
+        <dt>文字・数式</dt>
+        <dd>
+          用紙をクリックして配置。数式は右の欄に <code>\frac{a}{b}</code> のように入力します（$
+          は不要）。
+        </dd>
+        <dt>ショートカット</dt>
+        <dd>
+          V 選択 / L 直線 / A 矢印 / R 長方形 / C 円 / B 曲線 / T 文字 / M 数式<br />Delete 削除 /
+          矢印キー 微移動 / Shift＋矢印 大きく移動<br />⌘D 複製 / ⌘Z 元に戻す / ⇧⌘Z やり直す / Esc
+          中止
+        </dd>
+        <dt>保存と書き出し</dt>
+        <dd>
+          <code>.tikzdraw</code> は再編集用。<code>.tikz</code> は本文へ読み込む図、<code
+            >.tex</code
+          >
+          は単体でコンパイルする文書です。
+        </dd>
+      </dl>
+      <p class="help-note">
+        編集時の数式と実際の TeX では字形・対応コマンドに差があります。日本語を含む単体 TeX は
+        LuaLaTeX でコンパイルしてください。
+      </p>
+      <button class="primary" data-action="close-help">作図を始める</button>
+    </dialog>
+  </body>
+</html>
