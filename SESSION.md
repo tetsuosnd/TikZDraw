@@ -26,3 +26,6 @@ Poppler で描画して見た目も確認した。検証用スクリーンショ
 Windows の配布確認、Developer ID 署名・公証、任意の TikZ/WinTpic ファイルの読込は未対応。
 KaTeX の編集時表示と実 TeX は対応コマンド・字形が完全には一致しない。
 ソースの private remote は `tetsuosnd/TikZDraw`。
+remote は作成済み、ローカル commit 済み。push は自動承認レビューが
+「ソース一式と宛先への明示承認が必要」として拒否したため、ユーザーの返答待ち。
+`tetsuosnd-prefs/repos.md` の追加 1 行も同じ確認に含めている。
